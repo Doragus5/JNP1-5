@@ -118,7 +118,6 @@ public:
         }
         auto lower = function_map.lower_bound(a_ptr);
         auto upper = function_map.upper_bound(a_ptr);
-        //nowa wersja:
         auto next_max = m_end;
         auto prev_max = m_end;
         auto insert_max = m_end;
@@ -188,107 +187,6 @@ public:
                 throw;
             }
         }
-        /*
-        //stara wersja:
-        //new point is in the end of the current domain
-        if (lower == f_end) {
-            lower--;
-            //it is not a local maximum
-            if (*v_ptr < *(lower->second)) {
-                auto inserted_point = function_map.insert(f_end, point);
-                return;
-            }
-                //it is a local maximum
-            else {
-                auto inserted_point = function_map.insert(f_end, point);
-                auto prev_max = maxima_set.find(make_pair(lower->second, lower->first));
-                try {
-                    maxima_set.insert(max);
-                    if (!equalV(lower->second, v_ptr) && m_end != prev_max)
-                        maxima_set.erase(prev_max);
-                    return;
-                } catch (...) {
-                    function_map.erase(inserted_point);
-                    throw;
-                }
-            }
-        }
-            //new point is in the beginning of the current domain
-        else if (*a_ptr < *(lower->first) && lower == f_begin) {
-            //it is not a local maximum
-            if (*v_ptr < *(lower->second)) {
-                auto inserted_point = function_map.insert(f_end, point);
-                return;
-            }
-                //it is a local maximum
-            else {
-                auto inserted_point = function_map.insert(f_end, point);
-                auto prev_max = maxima_set.find(make_pair(lower->second, lower->first));
-                try {
-                    maxima_set.insert(max);
-                    if (!equalV(lower->second, v_ptr) && m_end != prev_max)
-                        maxima_set.erase(prev_max);
-                    return;
-                } catch (...) {
-                    function_map.erase(inserted_point);
-                    throw;
-                }
-            }
-        }
-            //point is already in the domain
-        else if (!(*a_ptr < *(lower->first))) {
-            if (equalV(lower->second, v_ptr))
-                return;
-            auto next_max = m_end;
-            if (upper != f_end)
-                next_max = maxima_set.find(make_pair(upper->second, upper->first));
-            auto prev = lower;
-            prev--;
-            auto prev_max = m_end;
-            if (lower != f_begin)
-                prev_max = maxima_set.find(make_pair(prev->second, prev->first));
-            auto already_max = maxima_set.find(make_pair(lower->second, lower->first));
-            bool is_local_max = (lower == f_begin || !(*v_ptr < *(prev->second))) &&
-                                (upper == f_end || !(*v_ptr < *(upper->second)));
-            bool erase_prev = lower == f_begin || *(prev->second) < *v_ptr;
-            bool erase_next = upper == f_end || *(upper->second) < *v_ptr;
-            //making changes starts here:
-            if (is_local_max)
-                maxima_set.insert(max);
-            //the rest of changes are noexcept
-            if (m_end != prev_max && erase_prev)
-                maxima_set.erase(prev_max);
-            if (m_end != next_max && erase_next)
-                maxima_set.erase(next_max);
-            if (m_end != already_max)
-                maxima_set.erase(already_max);
-            lower->second = v_ptr;
-            return;
-        }
-            //point is not in the domain and is inside of it
-        else {
-            auto next_max = maxima_set.find(make_pair(upper->second, upper->first));
-            auto prev = lower;
-            prev--;
-            auto prev_max = maxima_set.find(make_pair(prev->second, prev->first));
-            bool is_local_max = !(*v_ptr < *(prev->second)) && !(*v_ptr < *(upper->second));
-            bool erase_prev = lower == f_begin || *(prev->second) < *v_ptr;
-            bool erase_next = upper == f_end || *(upper->second) < *v_ptr;
-            auto inserted_point = function_map.insert(f_end, point);
-            try {
-                if (is_local_max)
-                    maxima_set.insert(max);
-                if (m_end != prev_max && erase_prev)
-                    maxima_set.erase(prev_max);
-                if (m_end != next_max && erase_next)
-                    maxima_set.erase(next_max);
-                return;
-            } catch (...) {
-                function_map.erase(inserted_point);
-                throw;
-            }
-        }
-        */
     }
 
     void erase(A const &a) {
