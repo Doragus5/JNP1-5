@@ -5,6 +5,9 @@
 #include<set>
 #include<utility>
 #include<memory>
+#include<cassert>
+#include<list>
+#include<typeinfo>
 
 // do usuniecia
 #include <iostream>
@@ -42,10 +45,38 @@ private:
         return !(*x < *y) && !(*y < *x);
     }
 
+
     using values_map_t = std::map<std::shared_ptr<A>, std::shared_ptr<V>, argumentComparator>;
     using maxima_set_t = std::set<std::pair<std::shared_ptr<V>, std::shared_ptr<A> >, pairComparator>;
     values_map_t function_map;
     maxima_set_t maxima_set;
+
+    typename maxima_set_t::iterator make_maximum_if_is(typename values_map_t::iterator point){
+        if(point == function_map.end() || maxima_set.end() != maxima_set.find(std::make_pair(point->second, point->first)))
+            return maxima_set.end();
+        auto prev = point;
+        prev--;
+        auto next = point;
+        next++;
+        bool lhs_maximum = (point == function_map.begin() || !(*(point->second) < *(prev->second)));
+        bool rhs_maximum = (next == function_map.end() || !(*(point->second) < *(next->second)));
+        if(lhs_maximum && rhs_maximum)
+            return maxima_set.insert(maxima_set.begin(), std::make_pair(point->second, point->first));
+        return maxima_set.end();
+    }
+
+    typename maxima_set_t::iterator make_previous_maximum_if_is(typename values_map_t::iterator point){
+        if(point == function_map.begin())
+            return maxima_set.end();
+        point--;
+        return make_maximum_if_is(point);
+    }
+
+    typename maxima_set_t::iterator make_next_maximum_if_is(typename values_map_t::iterator point){
+        if(point == function_map.end() || (point++) == function_map.end())
+            return maxima_set.end();
+        return make_maximum_if_is(point);
+    }
 
 public:
     FunctionMaxima() = default;
@@ -87,6 +118,78 @@ public:
         }
         auto lower = function_map.lower_bound(a_ptr);
         auto upper = function_map.upper_bound(a_ptr);
+        //nowa wersja:
+        auto next_max = m_end;
+        auto prev_max = m_end;
+        auto insert_max = m_end;
+        auto inserted_prev_max = m_end;
+        auto inserted_next_max = m_end;
+        auto prev = lower;
+        prev--;
+        if (upper != f_end)
+            next_max = maxima_set.find(make_pair(upper->second, upper->first));
+        if (lower != f_begin)
+            prev_max = maxima_set.find(make_pair(prev->second, prev->first));
+        bool erase_prev = lower == f_begin || *(prev->second) < *v_ptr;
+        bool erase_next = upper == f_end || *(upper->second) < *v_ptr;
+        //point is already in the domain
+        if (lower != f_end && !(*a_ptr < *(lower->first))) {
+            if (equalV(lower->second, v_ptr))
+                return;
+            auto already_max = maxima_set.find(make_pair(lower->second, lower->first));
+            auto dummy = lower->second;
+            try {
+                lower->second = v_ptr;
+                insert_max = make_maximum_if_is(lower);                //Theselines may throw an exception
+                inserted_prev_max = make_previous_maximum_if_is(lower);//
+                inserted_next_max = make_next_maximum_if_is(lower);    //
+                if (m_end != prev_max && erase_prev)//These lines are noexcept
+                    maxima_set.erase(prev_max);     //
+                if (m_end != next_max && erase_next)//
+                    maxima_set.erase(next_max);     //
+                if (m_end != already_max)           //
+                    maxima_set.erase(already_max);  //
+                return;
+            } catch (...) {
+                lower->second = dummy;
+                if(insert_max != m_end)
+                    maxima_set.erase(insert_max);
+                if(inserted_next_max != m_end)
+                    maxima_set.erase(inserted_next_max);
+                if(inserted_prev_max != m_end)
+                    maxima_set.erase(inserted_prev_max);
+                throw;
+            }
+        }
+            //point is not in the domain
+        else {
+            auto next_max = maxima_set.find(make_pair(upper->second, upper->first));
+            auto prev = lower;
+            prev--;
+            auto prev_max = maxima_set.find(make_pair(prev->second, prev->first));
+            auto inserted_point = function_map.insert(f_end, point);
+            try {
+                insert_max = make_maximum_if_is(lower);                //Theselines may throw an exception
+                inserted_prev_max = make_previous_maximum_if_is(lower);//
+                inserted_next_max = make_next_maximum_if_is(lower);    //
+                if (m_end != prev_max && erase_prev)//These lines are noexcept
+                    maxima_set.erase(prev_max);     //
+                if (m_end != next_max && erase_next)//
+                    maxima_set.erase(next_max);     //
+                return;
+            } catch (...) {
+                function_map.erase(inserted_point);
+                if(insert_max != m_end)
+                    maxima_set.erase(insert_max);
+                if(inserted_next_max != m_end)
+                    maxima_set.erase(inserted_next_max);
+                if(inserted_prev_max != m_end)
+                    maxima_set.erase(inserted_prev_max);
+                throw;
+            }
+        }
+        /*
+        //stara wersja:
         //new point is in the end of the current domain
         if (lower == f_end) {
             lower--;
@@ -185,18 +288,33 @@ public:
                 throw;
             }
         }
+        */
     }
 
     void erase(A const &a) {
         std::shared_ptr<A> a_ptr = std::make_shared<A>(a);
         auto point = function_map.find(a_ptr);
+        auto prev = point;
+        prev--;
+        auto next = point;
+        next++;
+        auto prev_max = maxima_set.end();
+        auto next_max = maxima_set.end();
         if (point == function_map.end())
             return;
         auto max = maxima_set.find(make_pair(point->second, a_ptr));
-        function_map.erase(point);
-        if (max == maxima_set.end())
-            return;
-        maxima_set.erase(max);
+        try{
+            prev_max = make_previous_maximum_if_is(point);//first modification that can throw an exception
+            next_max = make_next_maximum_if_is(point);//last modification that can throw an exception
+            function_map.erase(point);  //noexcept
+            if (max == maxima_set.end())//noexcept
+                return;                 //noexcept
+            maxima_set.erase(max);      //noexcept
+        } catch (...) {
+            if(!(prev_max == maxima_set.end()))
+                maxima_set.erase(prev_max);
+            throw;
+        }
     }
 
     using size_type = size_t;
