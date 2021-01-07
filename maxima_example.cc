@@ -53,6 +53,11 @@ int main() {
     std::cout << e.what() << std::endl;
   }
   assert(fun_equal(fun, {{0, 1}}));
+  try {
+    std::cout << fun.value_at(0) << std::endl;
+  } catch (InvalidArg &e) {
+    std::cout << e.what() << std::endl;
+  }
   assert(fun_mx_equal(fun, {{0, 1}}));
 
   fun.set_value(0, 0);
@@ -117,4 +122,9 @@ int main() {
   }
   assert(counter == 2 * N - 1);
   big = fun;
+  try {
+    std::cout << fun.value_at(0) << std::endl;
+  } catch (InvalidArg &e) {
+    std::cout << e.what() << std::endl;
+  }
 }

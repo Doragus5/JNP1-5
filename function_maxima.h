@@ -148,7 +148,7 @@ public:
                     maxima_set.erase(next_max);     //
                 if (m_end != already_max)           //
                     maxima_set.erase(already_max);  //
-                return;
+                
             } catch (...) {
                 lower->second = dummy;
                 if(insert_max != m_end)
@@ -162,10 +162,12 @@ public:
         }
             //point is not in the domain
         else {
-            auto next_max = maxima_set.find(make_pair(upper->second, upper->first));
+            if(upper != f_end)
+                next_max = maxima_set.find(make_pair(upper->second, upper->first));
             auto prev = lower;
             prev--;
-            auto prev_max = maxima_set.find(make_pair(prev->second, prev->first));
+            if(lower != f_begin)
+                prev_max = maxima_set.find(make_pair(prev->second, prev->first));
             auto inserted_point = function_map.insert(f_end, point);
             try {
                 insert_max = make_maximum_if_is(lower);                //Theselines may throw an exception
@@ -175,7 +177,6 @@ public:
                     maxima_set.erase(prev_max);     //
                 if (m_end != next_max && erase_next)//
                     maxima_set.erase(next_max);     //
-                return;
             } catch (...) {
                 function_map.erase(inserted_point);
                 if(insert_max != m_end)
