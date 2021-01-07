@@ -47,17 +47,7 @@ bool fun_mx_equal(const FunctionMaxima<A, V> &F,
 int main() {
   FunctionMaxima<int, int> fun;
   fun.set_value(0, 1);
-  try {
-    std::cout << fun.value_at(0) << std::endl;
-  } catch (InvalidArg &e) {
-    std::cout << e.what() << std::endl;
-  }
   assert(fun_equal(fun, {{0, 1}}));
-  try {
-    std::cout << fun.value_at(0) << std::endl;
-  } catch (InvalidArg &e) {
-    std::cout << e.what() << std::endl;
-  }
   assert(fun_mx_equal(fun, {{0, 1}}));
 
   fun.set_value(0, 0);
@@ -86,9 +76,7 @@ int main() {
   }
 
   fun.erase(1);
-  fun.erase(1);
   assert(fun.find(1) == fun.end());
-  fun.set_value(2, 2);
   assert(fun_mx_equal(fun, {{0, 2}, {2, 2}}));
 
   fun.set_value(-2, 0);
@@ -108,7 +96,7 @@ int main() {
   assert(v[1].arg().get() == 2);
   assert(v[1].value().get() == 20);
 
-  // To powinno dziaĹaÄ szybko.
+  // To powinno działać szybko.
   FunctionMaxima<int, int> big;
   using size_type = decltype(big)::size_type;
   const size_type N = 100000;
@@ -124,9 +112,4 @@ int main() {
   }
   assert(counter == 2 * N - 1);
   big = fun;
-  try {
-    std::cout << fun.value_at(0) << std::endl;
-  } catch (InvalidArg &e) {
-    std::cout << e.what() << std::endl;
-  }
 }
