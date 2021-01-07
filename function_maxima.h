@@ -148,7 +148,7 @@ public:
                     maxima_set.erase(next_max);     //
                 if (m_end != already_max)           //
                     maxima_set.erase(already_max);  //
-                
+
             } catch (...) {
                 lower->second = dummy;
                 if(insert_max != m_end)
@@ -247,17 +247,41 @@ public:
         }
     };
 
-    // iterator
-    // from: https://gist.github.com/jeetsukumaran/307264
-
-    class iterator
-    {
+private:
+    class shared_ptr_wrapper {
+    private:
+        std::shared_ptr<point_type> ref;
     public:
-        using self_type = iterator;
-        using wrapped_iterator_t = typename values_map_t::const_iterator;
+        shared_ptr_wrapper(std::shared_ptr<point_type> ref_) : ref(ref_) {}
+        shared_ptr_wrapper() : ref(nullptr) {}
+        const point_type& get_ref() {
+            return *ref;
+        }
+    };
+
+public:
+
+    class iterator {
+    public:
         using iterator_category = std::bidirectional_iterator_tag;
+        using wrapped_iterator_t = typename values_map_t::const_iterator;
+        using wrapped_value_t = point_type;
+        using self_type = iterator;
         using difference_type = std::ptrdiff_t;
-        iterator(wrapped_iterator_t it_) : it(it_) { }
+    private:
+        wrapped_iterator_t it;
+        shared_ptr_wrapper spw;
+    public:
+        iterator(wrapped_iterator_t it_) : it(it_) {
+            spw = shared_ptr_wrapper();
+        }
+        point_type* operator->() {
+            return &spw.get_ref();
+        }
+        point_type const& operator*() {
+            spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->first, it->second)));
+            return spw.get_ref();
+        }
         self_type operator++() { self_type i = *this; it++; return i; }
         self_type operator++(int) { it++; return *this; }
         self_type operator--() {self_type i = *this; it--; return i; }
@@ -272,14 +296,8 @@ public:
         self_type operator-(const difference_type& movement) {
             return operator+(-movement);
         }
-        point_type const& operator*() {
-            std::shared_ptr<point_type> result = std::make_shared<point_type>(point_type(it->first, it->second));
-            return *result;
-        }
         bool operator==(const self_type& rhs) const { return it == rhs.it; }
         bool operator!=(const self_type& rhs) const { return it != rhs.it; }
-    private:
-        wrapped_iterator_t it;
     };
 
     iterator begin() const {
@@ -287,7 +305,7 @@ public:
     }
 
     iterator end() const {
-        return  iterator(function_map.end());
+        return iterator(function_map.end());
     }
 
     iterator find(A const& a) const {
@@ -301,10 +319,17 @@ public:
         using wrapped_iterator_t = typename maxima_set_t::const_iterator;
         using iterator_category = std::bidirectional_iterator_tag;
         using difference_type = std::ptrdiff_t;
+        using wrapped_value_t = point_type;
         using pointer = self_type*;
         using reference = self_type&;
         using value_type = typename maxima_set_t::const_iterator;
-        mx_iterator(wrapped_iterator_t it_) : it(it_) { }
+        mx_iterator(wrapped_iterator_t it_) : it(it_) {
+            spw = shared_ptr_wrapper();
+        }
+        point_type const& operator*() {
+            spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->second, it->first)));
+            return spw.get_ref();
+        }
         self_type operator++() { self_type i = *this; it++; return i; }
         self_type operator++(int) { it++; return *this; }
         self_type operator--() {self_type i = *this; it--; return i; }
@@ -319,16 +344,11 @@ public:
         self_type operator-(const difference_type& movement) {
             return operator+(-movement);
         }
-        self_type&  operator=(const self_type& rawIterator) {
-        };
-        point_type const& operator*() {
-            std::shared_ptr<point_type> result = std::make_shared<point_type>(point_type(it->second, it->first));
-            return *result;
-        }
         bool operator==(const self_type& rhs) const { return it == rhs.it; }
         bool operator!=(const self_type& rhs) const { return it != rhs.it; }
     private:
         wrapped_iterator_t it;
+        shared_ptr_wrapper spw;
     };
 
     mx_iterator mx_begin() const {
@@ -338,6 +358,7 @@ public:
     mx_iterator mx_end() const {
         return mx_iterator(maxima_set.end());
     }
+
 
 };
 
