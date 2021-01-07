@@ -86,7 +86,9 @@ int main() {
   }
 
   fun.erase(1);
+  fun.erase(1);
   assert(fun.find(1) == fun.end());
+  fun.set_value(2, 2);
   assert(fun_mx_equal(fun, {{0, 2}, {2, 2}}));
 
   fun.set_value(-2, 0);

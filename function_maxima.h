@@ -193,25 +193,39 @@ public:
     void erase(A const &a) {
         std::shared_ptr<A> a_ptr = std::make_shared<A>(a);
         auto point = function_map.find(a_ptr);
+        if (point == function_map.end())
+            return;
         auto prev = point;
         prev--;
         auto next = point;
         next++;
         auto prev_max = maxima_set.end();
         auto next_max = maxima_set.end();
-        if (point == function_map.end())
-            return;
+        auto inserted_prev_max = maxima_set.end();
+        auto inserted_next_max = maxima_set.end();
+        bool erase_prev_max = false;
+        bool erase_next_max = false;
+        if(point != function_map.begin() && next != function_map.end()){
+            prev_max = maxima_set.find(make_pair(prev->second, prev->first));
+            next_max = maxima_set.find(make_pair(next->second, next->first));
+            erase_next_max = *(next->second) < *(prev->second);
+            erase_prev_max = *(prev->second) < *(next->second);
+        }
         auto max = maxima_set.find(make_pair(point->second, a_ptr));
         try{
-            prev_max = make_previous_maximum_if_is(point);//first modification that can throw an exception
-            next_max = make_next_maximum_if_is(point);//last modification that can throw an exception
+            //TODO poprawie
+            inserted_prev_max = make_previous_maximum_if_is(point);//first modification that can throw an exception
+            inserted_next_max = make_next_maximum_if_is(point);//last modification that can throw an exception
             function_map.erase(point);  //noexcept
-            if (max == maxima_set.end())//noexcept
-                return;                 //noexcept
-            maxima_set.erase(max);      //noexcept
-        } catch (...) {
-            if(!(prev_max == maxima_set.end()))
+            if (max != maxima_set.end())//noexcept
+                maxima_set.erase(max);  //noexcept
+            if(erase_next_max && next_max != maxima_set.end())
+                maxima_set.erase(next_max);
+            if(erase_prev_max && prev_max != maxima_set.end())
                 maxima_set.erase(prev_max);
+        } catch (...) {
+            if(!(inserted_prev_max == maxima_set.end()))
+                maxima_set.erase(inserted_prev_max);
             throw;
         }
     }
