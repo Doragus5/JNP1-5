@@ -148,7 +148,7 @@ public:
                     maxima_set.erase(next_max);     //
                 if (m_end != already_max)           //
                     maxima_set.erase(already_max);  //
-                
+
             } catch (...) {
                 lower->second = dummy;
                 if(insert_max != m_end)
@@ -206,7 +206,7 @@ public:
         bool erase_prev_max = false;
         bool erase_next_max = false;
         auto dummy = point->second;
-        
+
         if(point != function_map.begin() && next != function_map.end()){
             prev_max = maxima_set.find(make_pair(prev->second, prev->first));
             next_max = maxima_set.find(make_pair(next->second, next->first));
@@ -261,7 +261,6 @@ public:
         point_type() = delete;
 
         A const &arg() const {
-            assert(argumentPointer_ != nullptr);
             return *argumentPointer_;
         }
 
@@ -277,8 +276,8 @@ private:
     public:
         shared_ptr_wrapper(std::shared_ptr<point_type> ref_) : ref(ref_) {}
         shared_ptr_wrapper() : ref(nullptr) {}
-        const point_type& get_ref() {
-            return *ref;
+        const std::shared_ptr<point_type> get_ref() {
+            return ref;
         }
     };
 
@@ -290,6 +289,9 @@ public:
         using wrapped_iterator_t = typename values_map_t::const_iterator;
         using wrapped_value_t = point_type;
         using self_type = iterator;
+        using value_type = point_type;
+        using pointer = value_type*;
+        using reference = value_type&;
         using difference_type = std::ptrdiff_t;
     private:
         wrapped_iterator_t it;
@@ -298,17 +300,20 @@ public:
         iterator(wrapped_iterator_t it_) : it(it_) {
             spw = shared_ptr_wrapper();
         }
-        point_type* operator->() {
-            return &spw.get_ref();
+        const point_type* operator->() {
+            spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->first, it->second)));
+            return spw.get_ref().get();
         }
         point_type const& operator*() {
             spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->first, it->second)));
-            return spw.get_ref();
+            return *(spw.get_ref());
         }
         self_type operator++() { self_type i = *this; it++; return i; }
         self_type operator++(int) { it++; return *this; }
         self_type operator--() {self_type i = *this; it--; return i; }
         self_type operator--(int) { it--; return *this; }
+        self_type& operator=(const self_type& rawIterator) = default;
+        self_type& operator=(wrapped_iterator_t it_){it = it_; return (*this);}
         self_type operator+(const difference_type& movement) {
             auto oldPtr = it;
             it += movement;
@@ -349,14 +354,20 @@ public:
         mx_iterator(wrapped_iterator_t it_) : it(it_) {
             spw = shared_ptr_wrapper();
         }
+        const point_type* operator->() {
+            spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->second, it->first)));
+            return spw.get_ref().get();
+        }
         point_type const& operator*() {
             spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->second, it->first)));
-            return spw.get_ref();
+            return *(spw.get_ref());
         }
         self_type operator++() { self_type i = *this; it++; return i; }
         self_type operator++(int) { it++; return *this; }
         self_type operator--() {self_type i = *this; it--; return i; }
         self_type operator--(int) { it--; return *this; }
+        self_type& operator=(const self_type& rawIterator) = default;
+        self_type& operator=(wrapped_iterator_t it_){it = it_; return (*this);}
         self_type operator+(const difference_type& movement) {
             auto oldPtr = it;
             it += movement;
