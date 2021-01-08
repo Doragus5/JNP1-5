@@ -84,8 +84,16 @@ public:
     FunctionMaxima(const FunctionMaxima &toCopy) = default;
 
     FunctionMaxima &operator=(const FunctionMaxima &other) {
-        function_map = other.function_map;
-        maxima_set = other.maxima_set;
+        auto old_values = &function_map;
+        auto old_maximas = &maxima_set;
+        try {
+            function_map = values_map_t(other.function_map);
+            maxima_set = maxima_set_t(other.maxima_set);
+        }
+        catch (...) {
+            function_map = *old_values;
+            maxima_set = *old_maximas;
+        }
         return *this;
     }
 
@@ -115,6 +123,7 @@ public:
                 function_map.erase(inserted_point);
                 throw;
             }
+            return;
         }
         auto lower = function_map.lower_bound(a_ptr);
         auto upper = function_map.upper_bound(a_ptr);
@@ -358,7 +367,7 @@ public:
             spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->second, it->first)));
             return spw.get_ref().get();
         }
-        point_type const& operator*() {
+        const point_type& operator*() {
             spw = shared_ptr_wrapper(std::make_shared<point_type>(point_type(it->second, it->first)));
             return *(spw.get_ref());
         }
@@ -392,7 +401,6 @@ public:
     mx_iterator mx_end() const {
         return mx_iterator(maxima_set.end());
     }
-
 
 };
 
