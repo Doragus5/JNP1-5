@@ -83,17 +83,9 @@ public:
 
     FunctionMaxima(const FunctionMaxima &toCopy) = default;
 
-    FunctionMaxima &operator=(const FunctionMaxima &other) {
-        auto old_values = &function_map;
-        auto old_maximas = &maxima_set;
-        try {
-            function_map = values_map_t(other.function_map);
-            maxima_set = maxima_set_t(other.maxima_set);
-        }
-        catch (...) {
-            function_map = *old_values;
-            maxima_set = *old_maximas;
-        }
+    FunctionMaxima &operator=(FunctionMaxima other) noexcept {
+        function_map.swap(other.function_map);
+        maxima_set.swap(other.maxima_set);
         return *this;
     }
 
