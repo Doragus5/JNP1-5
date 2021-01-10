@@ -93,6 +93,20 @@ private:
         return make_maximum_if_is(point);
     }
 
+    void rollback(typename values_map_t::iterator p1, typename maxima_set_t::iterator m1,
+                  typename maxima_set_t::iterator m2, typename maxima_set_t::iterator m3) noexcept {
+        auto f_end = function_map.end();
+        auto m_end = maxima_set.end();
+        if (p1 != f_end)
+            function_map.erase(p1);
+        if (m1 != m_end)
+            maxima_set.erase(m1);
+        if (m3 != m_end)
+            maxima_set.erase(m3);
+        if (m2 != m_end)
+            maxima_set.erase(m2);
+    }
+
 public:
     FunctionMaxima() = default;
 
@@ -163,15 +177,9 @@ public:
                     maxima_set.erase(next_max);     //
                 if (m_end != already_max)           //
                     maxima_set.erase(already_max);  //
-
             } catch (...) {
                 lower->second = dummy;
-                if (insert_max != m_end)
-                    maxima_set.erase(insert_max);
-                if (inserted_next_max != m_end)
-                    maxima_set.erase(inserted_next_max);
-                if (inserted_prev_max != m_end)
-                    maxima_set.erase(inserted_prev_max);
+                rollback(f_end, insert_max, inserted_next_max, inserted_prev_max);
                 throw;
             }
         }
@@ -193,13 +201,7 @@ public:
                 if (m_end != next_max && erase_next)//
                     maxima_set.erase(next_max);     //
             } catch (...) {
-                function_map.erase(inserted_point);
-                if (insert_max != m_end)
-                    maxima_set.erase(insert_max);
-                if (inserted_next_max != m_end)
-                    maxima_set.erase(inserted_next_max);
-                if (inserted_prev_max != m_end)
-                    maxima_set.erase(inserted_prev_max);
+                rollback(inserted_point, insert_max, inserted_next_max, inserted_prev_max);
                 throw;
             }
         }
@@ -214,6 +216,8 @@ public:
         prev--;
         auto next = point;
         next++;
+        auto f_end = function_map.end();
+        auto m_end = maxima_set.end();
         auto prev_max = maxima_set.end();
         auto next_max = maxima_set.end();
         auto inserted_prev_max = maxima_set.end();
@@ -222,7 +226,7 @@ public:
         bool erase_next_max = false;
         auto dummy = point->second;
 
-        if (point != function_map.begin() && next != function_map.end()) {
+        if (point != function_map.begin() && next != f_end) {
             prev_max = maxima_set.find(make_pair(prev->second, prev->first));
             next_max = maxima_set.find(make_pair(next->second, next->first));
             erase_next_max = *(next->second) < *(prev->second);
@@ -230,7 +234,6 @@ public:
         }
         auto max = maxima_set.find(make_pair(point->second, a_ptr));
         try {
-            //TODO poprawie
             if (next != function_map.end())//noexcept
                 point->second = next->second;//noexcept modification
             if (point != function_map.begin())//noexcept
@@ -249,8 +252,7 @@ public:
                 maxima_set.erase(prev_max);//noexcept modification
         } catch (...) {
             point->second = dummy;
-            if (!(inserted_prev_max == maxima_set.end()))
-                maxima_set.erase(inserted_prev_max);
+            rollback(f_end, m_end, inserted_next_max, inserted_prev_max);
             throw;
         }
     }
