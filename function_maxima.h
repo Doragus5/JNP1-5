@@ -9,9 +9,6 @@
 #include<list>
 #include<typeinfo>
 
-// do usuniecia
-#include <iostream>
-
 class InvalidArg : public std::exception {
 public:
     virtual const char *what() const throw() {
@@ -45,7 +42,11 @@ private:
 
     };
 
+    using values_map_t = std::map<std::shared_ptr<A>, std::shared_ptr<V>, argumentComparator>;
+
     struct maximaSetComparator {
+        using is_transparent = std::true_type;
+
         bool operator()(const maxima_set_value_t &lhs, const maxima_set_value_t &rhs) const {
             if (*(rhs.first) < *(lhs.first))
                 return true;
@@ -53,20 +54,44 @@ private:
                 return false;
             return *(lhs.second) < *(rhs.second);
         }
+
+        bool operator()(const maxima_set_value_t &lhs, const typename values_map_t::iterator &rhs) const {
+            if (*(rhs->second) < *(lhs.first))
+                return true;
+            if (*(lhs.first) < *(rhs->second))
+                return false;
+            return *(lhs.second) < *(rhs->first);
+        }
+
+        bool operator()(const typename values_map_t::iterator &lhs, const maxima_set_value_t &rhs) const {
+            if (*(rhs.first) < *(lhs->second))
+                return true;
+            if (*(lhs->second) < *(rhs.first))
+                return false;
+            return *(lhs->first) < *(rhs.second);
+        }
+
+        bool operator()(const typename values_map_t::iterator &lhs, const typename values_map_t::iterator &rhs) const {
+            if (*(rhs->second) < *(lhs->second))
+                return true;
+            if (*(lhs->second) < *(rhs->second))
+                return false;
+            return *(lhs->first) < *(rhs->first);
+        }
+
     };
 
     bool are_pointed_values_equal(std::shared_ptr<V> x, std::shared_ptr<V> y) {
         return !(*x < *y) && !(*y < *x);
     }
 
-    using values_map_t = std::map<std::shared_ptr<A>, std::shared_ptr<V>, argumentComparator>;
     using maxima_set_t = std::set<std::pair<std::shared_ptr<V>, std::shared_ptr<A> >, maximaSetComparator>;
     values_map_t function_map;
     maxima_set_t maxima_set;
 
     typename maxima_set_t::iterator make_maximum_if_is(typename values_map_t::iterator point) {
         if (point == function_map.end() ||
-            maxima_set.end() != maxima_set.find(std::make_pair(point->second, point->first)))
+            maxima_set.end() != maxima_set.find(point))
             return maxima_set.end();
         /* czy point != begin ? */
         auto prev = point;
@@ -110,20 +135,21 @@ private:
 public:
     FunctionMaxima() = default;
 
-    FunctionMaxima(const FunctionMaxima &toCopy) = default;
+    FunctionMaxima(const FunctionMaxima &other) = default;
 
     FunctionMaxima &operator=(FunctionMaxima other) noexcept {
         function_map.swap(other.function_map);
         maxima_set.swap(other.maxima_set);
         return *this;
     }
+
     /**
      * @brief Checks value at point a
-     * Guarantees strong exception safety by not performing any modifications to the structure 
+     * Guarantees strong exception safety by not performing any modifications to the structure
      * and letting through any exceptions
-     * 
-     * @param a 
-     * @return V const& 
+     *
+     * @param a
+     * @return V const&
      */
     V const &value_at(A const &a) const {
         auto point = function_map.find(a);
@@ -133,15 +159,16 @@ public:
             return *(point->second);
         }
     }
+
     /**
      * @brief Set value to the argument in function
      * Guarantees strong exception safety using the rollback method.
      * Firstly it prepares itself to make changes using operations that may throw exceptions
      * Then it performs modifications to the structure that may throw exceptions and in case of one performs a rollback
      * Then it performs noexcept modifications
-     * 
-     * @param a 
-     * @param v 
+     *
+     * @param a
+     * @param v
      */
     void set_value(A const &a, V const &v) {
         auto a_ptr = std::make_shared<A>(a);
@@ -160,10 +187,10 @@ public:
         auto inserted_next_max = m_end;
         auto prev = lower;
         if (upper != f_end)
-            next_max = maxima_set.find(make_pair(upper->second, upper->first));
+            next_max = maxima_set.find(upper);
         if (lower != f_begin) {
             prev--;
-            prev_max = maxima_set.find(make_pair(prev->second, prev->first));
+            prev_max = maxima_set.find(prev);
         }
         bool erase_prev = lower == f_begin || *(prev->second) < *v_ptr;
         bool erase_next = upper == f_end || *(upper->second) < *v_ptr;
@@ -171,7 +198,7 @@ public:
         if (lower != f_end && !(*a_ptr < *(lower->first))) {
             if (are_pointed_values_equal(lower->second, v_ptr))
                 return;
-            auto already_max = maxima_set.find(make_pair(lower->second, lower->first));
+            auto already_max = maxima_set.find(lower);
             auto dummy = lower->second;
             try {
                 lower->second = v_ptr;
@@ -192,7 +219,7 @@ public:
         }
             //point is not in the domain
         else {
-            auto inserted_point = function_map.insert(f_end, point);//First modification that may throw an exception 
+            auto inserted_point = function_map.insert(f_end, point);//First modification that may throw an exception
             try {
                 insert_max = make_maximum_if_is(inserted_point);                //Theselines may throw an exception
                 inserted_prev_max = make_previous_maximum_if_is(inserted_point);//
@@ -207,14 +234,15 @@ public:
             }
         }
     }
+
     /**
      * @brief Erase a point from the function
      * Guarantees strong exception safety using the rollback method.
      * Firstly it prepares itself to make changes using operations that may throw exceptions
      * Then it performs modifications to the structure that may throw exceptions and in case of one performs a rollback
      * Then it performs noexcept modifications
-     * 
-     * @param a 
+     *
+     * @param a
      */
     void erase(A const &a) {
         auto a_ptr = std::make_shared<A>(a);
@@ -235,8 +263,8 @@ public:
         bool erase_next_max = false;
         auto dummy = point->second;
         if (point != function_map.begin() && next != f_end) {
-            prev_max = maxima_set.find(make_pair(prev->second, prev->first));
-            next_max = maxima_set.find(make_pair(next->second, next->first));
+            prev_max = maxima_set.find(prev);
+            next_max = maxima_set.find(next);
             erase_next_max = *(next->second) < *(prev->second);
             erase_prev_max = *(prev->second) < *(next->second);
         }
@@ -267,7 +295,7 @@ public:
 
     using size_type = size_t;
 
-    size_type size() const {
+    size_type size() const noexcept {
         return function_map.size();
     }
 
@@ -286,11 +314,11 @@ public:
     public:
         point_type() = delete;
 
-        A const &arg() const {
+        A const &arg() const noexcept {
             return *argument_pointer;
         }
 
-        V const &value() const {
+        V const &value() const noexcept {
             return *value_pointer;
         }
     };
@@ -311,6 +339,10 @@ private:
     };
 
 public:
+    /**
+     * Guarantees strong exception safety, because const_iterator that
+     * is wrapped by this class is also guarantees strong exception safety
+     */
     class iterator {
     private:
         using self_type = iterator;
@@ -361,9 +393,13 @@ public:
 
         self_type &operator=(const self_type &other) = default;
 
-        bool operator==(const self_type &rhs) const { return wrapped_iterator == rhs.wrapped_iterator; }
+        bool operator==(const self_type &rhs) const noexcept {
+            return wrapped_iterator == rhs.wrapped_iterator;
+        }
 
-        bool operator!=(const self_type &rhs) const { return wrapped_iterator != rhs.wrapped_iterator; }
+        bool operator!=(const self_type &rhs) const noexcept {
+            return wrapped_iterator != rhs.wrapped_iterator;
+        }
 
     private:
         friend class FunctionMaxima;
@@ -388,6 +424,10 @@ public:
         return iterator(function_map.find(a));
     }
 
+    /**
+     * Guarantees strong exception safety, because const_iterator that
+     * is wrapped by this class is also guarantees strong exception safety
+     */
     class mx_iterator {
     private:
         using self_type = mx_iterator;
@@ -438,9 +478,13 @@ public:
 
         self_type &operator=(const self_type &other) = default;
 
-        bool operator==(const self_type &rhs) const { return wrapped_iterator == rhs.wrapped_iterator; }
+        bool operator==(const self_type &rhs) const noexcept {
+            return wrapped_iterator == rhs.wrapped_iterator;
+        }
 
-        bool operator!=(const self_type &rhs) const { return wrapped_iterator != rhs.wrapped_iterator; }
+        bool operator!=(const self_type &rhs) const noexcept {
+            return wrapped_iterator != rhs.wrapped_iterator;
+        }
 
     private:
         friend class FunctionMaxima;
