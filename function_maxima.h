@@ -117,7 +117,14 @@ public:
         maxima_set.swap(other.maxima_set);
         return *this;
     }
-
+    /**
+     * @brief Checks value at point a
+     * Guarantees strong exception safety by not performing any modifications to the structure 
+     * and letting through any exceptions
+     * 
+     * @param a 
+     * @return V const& 
+     */
     V const &value_at(A const &a) const {
         auto point = function_map.find(a);
         if (point == function_map.end()) {
@@ -126,7 +133,16 @@ public:
             return *(point->second);
         }
     }
-
+    /**
+     * @brief Set value to the argument in function
+     * Guarantees strong exception safety using the rollback method.
+     * Firstly it prepares itself to make changes using operations that may throw exceptions
+     * Then it performs modifications to the structure that may throw exceptions and in case of one performs a rollback
+     * Then it performs noexcept modifications
+     * 
+     * @param a 
+     * @param v 
+     */
     void set_value(A const &a, V const &v) {
         auto a_ptr = std::make_shared<A>(a);
         auto v_ptr = std::make_shared<V>(v);
@@ -176,7 +192,7 @@ public:
         }
             //point is not in the domain
         else {
-            auto inserted_point = function_map.insert(f_end, point);
+            auto inserted_point = function_map.insert(f_end, point);//First modification that may throw an exception 
             try {
                 insert_max = make_maximum_if_is(inserted_point);                //Theselines may throw an exception
                 inserted_prev_max = make_previous_maximum_if_is(inserted_point);//
@@ -191,7 +207,15 @@ public:
             }
         }
     }
-
+    /**
+     * @brief Erase a point from the function
+     * Guarantees strong exception safety using the rollback method.
+     * Firstly it prepares itself to make changes using operations that may throw exceptions
+     * Then it performs modifications to the structure that may throw exceptions and in case of one performs a rollback
+     * Then it performs noexcept modifications
+     * 
+     * @param a 
+     */
     void erase(A const &a) {
         auto a_ptr = std::make_shared<A>(a);
         auto point = function_map.find(a);
@@ -210,7 +234,6 @@ public:
         bool erase_prev_max = false;
         bool erase_next_max = false;
         auto dummy = point->second;
-
         if (point != function_map.begin() && next != f_end) {
             prev_max = maxima_set.find(make_pair(prev->second, prev->first));
             next_max = maxima_set.find(make_pair(next->second, next->first));
