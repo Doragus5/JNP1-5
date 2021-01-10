@@ -25,12 +25,27 @@ private:
     using maxima_set_value_t = std::pair<std::shared_ptr<V>, std::shared_ptr<A>>;
 
     struct argumentComparator {
+        using is_transparent = std::true_type;
+
         bool operator()(const std::shared_ptr<A> &lhs, const std::shared_ptr<A> &rhs) const {
             return *lhs < *rhs;
         }
+
+        bool operator()(const std::shared_ptr<A> &lhs, const A &rhs) const {
+            return *lhs < rhs;
+        }
+
+        bool operator()(const A &lhs, const std::shared_ptr<A> &rhs) const {
+            return lhs < *rhs;
+        }
+
+        bool operator()(const A &lhs, const A &rhs) const {
+            return lhs < rhs;
+        }
+
     };
 
-    struct pairComparator {
+    struct maximaSetComparator {
         bool operator()(const maxima_set_value_t &lhs, const maxima_set_value_t &rhs) const {
             if (*(rhs.first) < *(lhs.first))
                 return true;
@@ -45,7 +60,7 @@ private:
     }
 
     using values_map_t = std::map<std::shared_ptr<A>, std::shared_ptr<V>, argumentComparator>;
-    using maxima_set_t = std::set<std::pair<std::shared_ptr<V>, std::shared_ptr<A> >, pairComparator>;
+    using maxima_set_t = std::set<std::pair<std::shared_ptr<V>, std::shared_ptr<A> >, maximaSetComparator>;
     values_map_t function_map;
     maxima_set_t maxima_set;
 
@@ -90,8 +105,7 @@ public:
     }
 
     V const &value_at(A const &a) const {
-        std::shared_ptr<A> shr_ptr = std::make_shared<A>(a);
-        auto point = function_map.find(shr_ptr);
+        auto point = function_map.find(a);
         if (point == function_map.end()) {
             throw InvArg;
         } else {
@@ -192,8 +206,8 @@ public:
     }
 
     void erase(A const &a) {
-        std::shared_ptr<A> a_ptr = std::make_shared<A>(a);
-        auto point = function_map.find(a_ptr);
+        auto a_ptr = std::make_shared<A>(a);
+        auto point = function_map.find(a);
         if (point == function_map.end())
             return;
         auto prev = point;
@@ -337,18 +351,6 @@ public:
 
         self_type &operator=(const self_type &other) = default;
 
-        self_type operator+(const difference_type &movement) {
-            auto oldPtr = wrapped_iterator;
-            wrapped_iterator += movement;
-            auto temp(*this);
-            wrapped_iterator = oldPtr;
-            return temp;
-        }
-
-        self_type operator-(const difference_type &movement) {
-            return operator+(-movement);
-        }
-
         bool operator==(const self_type &rhs) const { return wrapped_iterator == rhs.wrapped_iterator; }
 
         bool operator!=(const self_type &rhs) const { return wrapped_iterator != rhs.wrapped_iterator; }
@@ -373,7 +375,7 @@ public:
     }
 
     iterator find(A const &a) const {
-        return iterator(function_map.find(std::make_shared<A>(a)));
+        return iterator(function_map.find(a));
     }
 
     class mx_iterator {
@@ -425,18 +427,6 @@ public:
         }
 
         self_type &operator=(const self_type &other) = default;
-
-        self_type operator+(const difference_type &movement) {
-            auto oldPtr = wrapped_iterator;
-            wrapped_iterator += movement;
-            auto temp(*this);
-            wrapped_iterator = oldPtr;
-            return temp;
-        }
-
-        self_type operator-(const difference_type &movement) {
-            return operator+(-movement);
-        }
 
         bool operator==(const self_type &rhs) const { return wrapped_iterator == rhs.wrapped_iterator; }
 
