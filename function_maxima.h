@@ -135,16 +135,6 @@ public:
         auto f_end = function_map.end();
         auto f_begin = function_map.begin();
         auto m_end = maxima_set.end();
-        if (function_map.size() == 0) {
-            auto inserted_point = function_map.insert(f_end, point);
-            try {
-                maxima_set.insert(max);
-            } catch (...) {
-                function_map.erase(inserted_point);
-                throw;
-            }
-            return;
-        }
         auto lower = function_map.lower_bound(a_ptr);
         auto upper = function_map.upper_bound(a_ptr);
         auto next_max = m_end;
@@ -153,11 +143,12 @@ public:
         auto inserted_prev_max = m_end;
         auto inserted_next_max = m_end;
         auto prev = lower;
-        prev--;
         if (upper != f_end)
             next_max = maxima_set.find(make_pair(upper->second, upper->first));
-        if (lower != f_begin)
+        if (lower != f_begin) {
+            prev--;
             prev_max = maxima_set.find(make_pair(prev->second, prev->first));
+        }
         bool erase_prev = lower == f_begin || *(prev->second) < *v_ptr;
         bool erase_next = upper == f_end || *(upper->second) < *v_ptr;
         //point is already in the domain
@@ -185,12 +176,6 @@ public:
         }
             //point is not in the domain
         else {
-            if (upper != f_end)
-                next_max = maxima_set.find(make_pair(upper->second, upper->first));
-            auto prev = lower;
-            prev--;
-            if (lower != f_begin)
-                prev_max = maxima_set.find(make_pair(prev->second, prev->first));
             auto inserted_point = function_map.insert(f_end, point);
             try {
                 insert_max = make_maximum_if_is(inserted_point);                //Theselines may throw an exception
